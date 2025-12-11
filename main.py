@@ -1,34 +1,29 @@
 import os
 from fastapi import FastAPI, Request
 from telegram.ext import ApplicationBuilder, CommandHandler
-import uvicorn
 
 TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_URL = os.getenv("RENDER_EXTERNAL_URL") + "/webhook"
 
-# FastAPI app
 app = FastAPI()
 
-# Telegram BOT setup
-telegram_app = ApplicationBuilder().token(TOKEN).build()
-
-# /start command
+# ---------------- TELEGRAM HANDLERS ---------------- #
 async def start(update, context):
-    await update.message.reply_text("Webhook is running successfully!")
+    await update.message.reply_text("Bot is running with webhook! 🚀")
 
+# Build telegram app
+telegram_app = ApplicationBuilder().token(TOKEN).build()
 telegram_app.add_handler(CommandHandler("start", start))
 
 
-# Setup webhook when server starts
+# ---------------- STARTUP: SET WEBHOOK ---------------- #
 @app.on_event("startup")
-async def startup_event():
-    render_url = os.getenv("RENDER_EXTERNAL_URL")
-    webhook_url = f"{render_url}/webhook"
-
-    await telegram_app.bot.set_webhook(url=webhook_url)
-    print("Webhook set to:", webhook_url)
+async def on_startup():
+    await telegram_app.bot.set_webhook(WEBHOOK_URL)
+    print("Webhook set to:", WEBHOOK_URL)
 
 
-# Telegram sends updates here
+# ---------------- WEBHOOK ROUTE ---------------- #
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -36,6 +31,7 @@ async def webhook(request: Request):
     return {"ok": True}
 
 
-# Run FastAPI normally
+# ---------------- RUN FASTAPI ---------------- #
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
